@@ -8,7 +8,7 @@ git push -u origin master
 
 Procédure de lancement:
 
-git pull -u origin master
+git pull 
 Pour compiler le serveur: gcc -pthread server.c -o server
 Pour compiler le client: gcc -pthread client.c -o client
 
