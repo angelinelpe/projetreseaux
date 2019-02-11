@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
     //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5001);
+    adresse_locale.sin_port = htons(5003);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
@@ -109,8 +109,6 @@ int main(int argc, char **argv) {
     }
     
     printf("connexion etablie avec le serveur. \n\n");
-
-	printf("  Le chat est ouvert ! \n");
 
 
 	//Saisie du pseudo 
@@ -130,7 +128,7 @@ int main(int argc, char **argv) {
 	exit(1);
     }
 
-    printf("Vous avez choisi le pseudo : %s !\n", pseudo);
+    printf("Bienvenue %s !\n", pseudo);
 	printf("tapez 'quit' si vous voulez quitter le chat. \n\n");
 
 
