@@ -36,6 +36,7 @@ typedef struct
 
 // Déclaration des procédures et fonction:
 static void * renvoi (void * sender);
+void sendWhisper(Client * client, char destination[], char buffer[]);
 void sendMessageClient(Client * client, char buffer[]);
 void printClient(char buffer[]);
 void connectedClients();
@@ -72,6 +73,13 @@ static void * renvoi (void * sender){
         buffer[length]='\0';
         sleep(2);
         
+        char *action;
+        action = strtok(buffer," ");
+        char *who;
+        who = strtok(NULL," ");
+        char *message;
+        message = strtok(NULL,"");
+
         //Le client souhaite quitter le chat
         if(strcmp(buffer, "quitter")==0){
             printf("%s est parti du chat\n", (*client).pseudo);
@@ -90,17 +98,50 @@ static void * renvoi (void * sender){
                 
             }
 
-        }   
+        }  
+
+        else if (strcmp(action,"/w")==0){
+            sendWhisper(client, who, message);
+        }
             
         //Envoi d'un message dans le chat
         else if(length > 0){
             sendMessageClient(client, buffer);  
         }
-
     }
 }
 
 // Procédure qui permet d'envoyer un message sur la console des clients
+//rajouté
+void sendWhisper(Client * client, char destination[], char buffer[]){
+    char *message = malloc (sizeof (*message) * 256);
+    // Création de la chaîne de caractère à afficher sur le chat
+    strcpy(message, (*client).pseudo);
+    strcat(message," vous chuchote : ");
+    strcat(message,buffer);
+    printf("%s\n", message);
+
+    int trouve;
+    int i;
+    trouve = 0;
+    i = 0;
+    while(trouve=0 || i<=nbClientsConnected){
+        if (strcmp(arrClientsConnected[i].pseudo,destination)==0)
+        {
+            trouve = 1;
+            printf("valeur de trouve%d\n", trouve);
+            printf("valeur de i%d\n", i);
+        } else
+        i++;
+    }
+
+    if (trouve=1)
+    {
+        write(arrClientsConnected[i].socket,message,strlen(message)+1);
+    }
+}
+
+// Procédure qui permet d'envoyer un message de chuchotement à un client
 //rajouté
 void sendMessageClient(Client * client, char buffer[]){
     char *message = malloc (sizeof (*message) * 256);
