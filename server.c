@@ -121,24 +121,27 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
     strcat(message,buffer);
     printf("%s\n", message);
 
-    int trouve;
-    int i;
+    int trouve, pos;
     trouve = 0;
-    i = 0;
-    while(trouve=0 || i<=nbClientsConnected){
+    pos = 0;
+   
+    for (int i = 0; i < nbClientsConnected; ++i)
+    {
         if (strcmp(arrClientsConnected[i].pseudo,destination)==0)
         {
             trouve = 1;
-            printf("valeur de trouve%d\n", trouve);
-            printf("valeur de i%d\n", i);
-        } else
-        i++;
+            pos = i;
+            printf("valeur du pseudo %s valeur de la destination %s \n", arrClientsConnected[i].pseudo,destination);
+            printf("valeur de i %d\n", i);
+            printf("valeur de trouve %d\n", trouve);
+        }
     }
 
-    if (trouve=1)
+    if (trouve = 1)
     {
-        write(arrClientsConnected[i].socket,message,strlen(message)+1);
+        write(arrClientsConnected[pos].socket,message,strlen(message)+1);
     }
+
 }
 
 // Procédure qui permet d'envoyer un message de chuchotement à un client
@@ -242,7 +245,7 @@ main(int argc, char **argv) {
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
     //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5003);
+    adresse_locale.sin_port = htons(5004);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
