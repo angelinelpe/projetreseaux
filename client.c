@@ -25,8 +25,9 @@ static void * ecoute (void * socket_descriptor){
     char buffer[256];
     int  taille;
     while(1){
-        if((taille = read(*socket, buffer, (int)sizeof(buffer)))<=0)
-            exit(1);
+        if((taille = read(*socket, buffer, (int)sizeof(buffer)))<=0){
+        	exit(1);
+        }
         buffer[taille]='\0';
         printf("%s \n", buffer);
     }
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
     //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5004);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
@@ -128,8 +129,12 @@ int main(int argc, char **argv) {
 	exit(1);
     }
 
-    printf("Bienvenue %s !\n", pseudo);
-	printf("tapez 'quit' si vous voulez quitter le chat. \n\n");
+    printf("%s, vous êtes connecté au chat !\n", pseudo);
+    printf("Voici les commandes du chat:\n");
+    printf("'/who' pour savoir qui est connecté\n");
+    printf("'/w destinataire message' pour chuchoter à un autre utilisateur\n");
+	printf("'/quit' pour quitter \n");
+	printf("'/cmd' pour un rappel des commandes\n\n");
 
 
 

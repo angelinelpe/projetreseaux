@@ -35,12 +35,11 @@ typedef struct
 } Client;
 
 // Déclaration des procédures et fonction:
+void leave(Client * client);
+void printConnectedClients(Client * client);
 static void * renvoi (void * sender);
 void sendWhisper(Client * client, char destination[], char buffer[]);
 void sendMessageClient(Client * client, char buffer[]);
-void printClient(char buffer[]);
-void connectedClients();
-void whoIsConnected();
 
 // Compteur du nombre de clients connectés au server
 //Rajouté
@@ -62,7 +61,7 @@ static void * renvoi (void * sender){
     // Le client n'a pas défini son pseudo
     while(strlen((*client).pseudo)<=1){
         length = read((*client).socket, buffer, sizeof(buffer));
-        sleep(3);
+        //sleep(3);
         buffer[length]='\0'; 
         strcpy((*client).pseudo, buffer);
         write(1,buffer,length);
@@ -71,44 +70,78 @@ static void * renvoi (void * sender){
     while(1){
         length = read((*client).socket, buffer, sizeof(buffer));
         buffer[length]='\0';
-        sleep(2);
+        //sleep(2);
         
+        // On extrait l'action, le destinataire et le message afin de savoir si le client veut 
+        // envoyer un message sur le channel général ou chuchoter à un autre client
         char *action;
         action = strtok(buffer," ");
-        char *who;
-        who = strtok(NULL," ");
+        char *destination;
+        destination = strtok(NULL," ");
         char *message;
         message = strtok(NULL,"");
 
-        //Le client souhaite quitter le chat
-        if(strcmp(buffer, "quitter")==0){
-            printf("%s est parti du chat\n", (*client).pseudo);
-            close((*client).socket);
-            pthread_exit(NULL);
-        }
+        if(strcmp(buffer, "/leave")==0){
+            //Si le client souhaite quitter le chat
+            leave(client);
 
-        else if (strcmp(buffer,"qui")==0){
-            for (int i = 0; i < nbClientsConnected; ++i)
-            {
-                for (int j = 0; j < nbClientsConnected; ++j)
-                {
-                    write(arrClientsConnected[i].socket, arrClientsConnected[j].pseudo, strlen(arrClientsConnected[j].pseudo)+1);
-                    //effectue bien les boucles mais ne veut pas afficher
-                }
-                
-            }
+        }else if (strcmp(buffer,"/who")==0){
+            //Si le client souhaite savoir qui est connecté
+            printConnectedClients(client);
 
-        }  
+        }else if (strcmp(action,"/w")==0){
+            //Si le client souhaite chuchoter à un autre client
+            sendWhisper(client, destination, message);
 
-        else if (strcmp(action,"/w")==0){
-            sendWhisper(client, who, message);
-        }
-            
-        //Envoi d'un message dans le chat
-        else if(length > 0){
+        }else if (strcmp(buffer,"/cmd")==0){
+            //Si le cliend souhaite un rappel des commandes du chat
+            commands(client);
+
+        }else if(length > 0){
+            //Si le client souhaite envoyer un message sur le channel général
             sendMessageClient(client, buffer);  
         }
     }
+}
+
+void leave(Client * client){
+    printf("%s est parti du chat\n", (*client).pseudo);
+    close((*client).socket);
+    pthread_exit(NULL);
+}
+
+
+void printConnectedClients(Client * client){
+
+    char *message;
+    int trouve;
+    int pos;
+
+    trouve = 0;
+    pos = 0;
+
+// On parcourt les clients connectés jusqu'à trouver le client qui souhaite avoir l'info
+    for (int i = 0; i < nbClientsConnected; ++i)
+    {
+        if (strcmp(arrClientsConnected[i].pseudo,client->pseudo)==0)
+        {
+            trouve = 1;
+            pos = i;
+        }
+    }
+
+    // Si on l'a trouvé on va afficher tous les pseudos des clients connectés au client qui le souhaite
+    if (trouve = 1)
+    {
+        strcpy(message,"Les clients connectés sont:\n");
+        for (int j = 0; j < nbClientsConnected; ++j)
+        {
+            strcat(message,arrClientsConnected[j].pseudo);
+            strcat(message,"\n");
+            
+        }
+        write(arrClientsConnected[pos].socket,message,strlen(message)+1);
+    }  
 }
 
 // Procédure qui permet d'envoyer un message sur la console des clients
@@ -131,15 +164,14 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
         {
             trouve = 1;
             pos = i;
-            printf("valeur du pseudo %s valeur de la destination %s \n", arrClientsConnected[i].pseudo,destination);
-            printf("valeur de i %d\n", i);
-            printf("valeur de trouve %d\n", trouve);
         }
     }
 
     if (trouve = 1)
     {
+        color(5,0);
         write(arrClientsConnected[pos].socket,message,strlen(message)+1);
+        color(15,0);
     }
 
 }
@@ -161,43 +193,6 @@ void sendMessageClient(Client * client, char buffer[]){
             } 
         }     
     }    
-}
-
-// Procédure qui permet d'afficher un message dans la console des clients
-//rajouté
-void printClient(char buffer[]){
-    char *message = malloc (sizeof (*message) * 256);
-    strcat(message,buffer);
-    printf("%s\n", message);
-    for (int i=0;i<nbClientsConnected;i++){
-            write(arrClientsConnected[i].socket,message,strlen(message)+1); 
-    }    
-}
-
-
-// Procédure qui affiche le pseudo des clients qui sont connectés sur la console d'un client
-// Probleme de la procédure: pour le serveur tout est affiché, pour les clients le premier client est affiché
-// On dirait que la console du client n'a pas accès a la suite du tableau ?????
-//rajouté
-void connectedClients(){
-	int i = 0;
-	for(i; i<nbClientsConnected; i++){
-		printf("\n");
-		printClient(arrClientsConnected[i].pseudo);
-	}
-}
-
-// Procédure qui affiche les informations (pseudo, socket) des clients connectés au chat sur le serveur
-// Peut être à supprimer
-//rajouté
-void whoIsConnected(){
-    int i = 0;
-    for(i; i<nbClientsConnected; i++){
-        printf("\nUtilisateur %i\n", i);
-        printf("Pseudo: %s\n", arrClientsConnected[i].pseudo);
-        printf("Socket: %i\n", arrClientsConnected[i].socket);
-        printf("Connecté: %i\n", arrClientsConnected[i].connected);
-    }
 }
 
 	
@@ -245,7 +240,7 @@ main(int argc, char **argv) {
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
     //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5004);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
