@@ -35,6 +35,7 @@ typedef struct
 } Client;
 
 // Déclaration des procédures et fonction:
+void commands(Client * client);
 void leave(Client * client);
 void printConnectedClients(Client * client);
 static void * renvoi (void * sender);
@@ -104,23 +105,11 @@ static void * renvoi (void * sender){
     }
 }
 
-void leave(Client * client){
-    printf("%s est parti du chat\n", (*client).pseudo);
-    close((*client).socket);
-    pthread_exit(NULL);
-}
-
-
-void printConnectedClients(Client * client){
-
-    char *message;
-    int trouve;
-    int pos;
-
+int findPos(Client * client){
+    int trouve, pos;
     trouve = 0;
-    pos = 0;
+    pos = 9999;
 
-// On parcourt les clients connectés jusqu'à trouver le client qui souhaite avoir l'info
     for (int i = 0; i < nbClientsConnected; ++i)
     {
         if (strcmp(arrClientsConnected[i].pseudo,client->pseudo)==0)
@@ -130,15 +119,47 @@ void printConnectedClients(Client * client){
         }
     }
 
+    return pos;
+}
+
+void commands(Client * client){
+    char *message;
+    int pos;
+    pos = findPos(client);
+
+    // Si on l'a trouvé on va afficher le message de commandes
+    if (pos != 9999)
+    {
+        strcpy(message,"Voici les commandes du chat:\n");
+        strcat(message,"/who' pour savoir qui est connecté\n");
+        strcat(message,"'/w destinataire message' pour chuchoter à un autre utilisateur\n");
+        strcat(message,"'/leave' pour quitter \n'");
+        strcat(message,"'/cmd' pour un rappel des commandes\n\n");
+        write(arrClientsConnected[pos].socket,message,strlen(message)+1);
+    }  
+}
+
+void leave(Client * client){
+    printf("%s est parti du chat\n", (*client).pseudo);
+    close((*client).socket);
+    pthread_exit(NULL);
+}
+
+
+void printConnectedClients(Client * client){
+    char *message;
+    int pos;
+
+    pos = findPos(client);
+
     // Si on l'a trouvé on va afficher tous les pseudos des clients connectés au client qui le souhaite
-    if (trouve = 1)
+    if (pos != 9999)
     {
         strcpy(message,"Les clients connectés sont:\n");
         for (int j = 0; j < nbClientsConnected; ++j)
         {
             strcat(message,arrClientsConnected[j].pseudo);
             strcat(message,"\n");
-            
         }
         write(arrClientsConnected[pos].socket,message,strlen(message)+1);
     }  
@@ -154,24 +175,12 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
     strcat(message,buffer);
     printf("%s\n", message);
 
-    int trouve, pos;
-    trouve = 0;
-    pos = 0;
+    int pos;
+    pos = findPos(client);
    
-    for (int i = 0; i < nbClientsConnected; ++i)
+    if (pos != 9999)
     {
-        if (strcmp(arrClientsConnected[i].pseudo,destination)==0)
-        {
-            trouve = 1;
-            pos = i;
-        }
-    }
-
-    if (trouve = 1)
-    {
-        color(5,0);
         write(arrClientsConnected[pos].socket,message,strlen(message)+1);
-        color(15,0);
     }
 
 }
