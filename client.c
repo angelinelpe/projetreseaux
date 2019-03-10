@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
     //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5000);
+    adresse_locale.sin_port = htons(5002);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
@@ -132,8 +132,8 @@ int main(int argc, char **argv) {
     printf("%s, vous êtes connecté au chat !\n", pseudo);
     printf("Voici les commandes du chat:\n");
     printf("'/who' pour savoir qui est connecté\n");
-    printf("'/w destinataire message' pour chuchoter à un autre utilisateur\n");
-	printf("'/quit' pour quitter \n");
+    printf("'/w destinataire message' pour chuchoter un message à un destinataire\n");
+	printf("'/leave' pour quitter \n");
 	printf("'/cmd' pour un rappel des commandes\n\n");
 
 

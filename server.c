@@ -75,6 +75,9 @@ static void * renvoi (void * sender){
         
         // On extrait l'action, le destinataire et le message afin de savoir si le client veut 
         // envoyer un message sur le channel général ou chuchoter à un autre client
+        char transition[sizeof(buffer)];
+        strcpy(transition,buffer);
+
         char *action;
         action = strtok(buffer," ");
         char *destination;
@@ -100,12 +103,12 @@ static void * renvoi (void * sender){
 
         }else if(length > 0){
             //Si le client souhaite envoyer un message sur le channel général
-            sendMessageClient(client, buffer);  
+            sendMessageClient(client, transition);  
         }
     }
 }
 
-int findPos(Client * client){
+int findClient(Client * client){
     int trouve, pos;
     trouve = 0;
     pos = 9999;
@@ -122,18 +125,35 @@ int findPos(Client * client){
     return pos;
 }
 
+int findPseudo(char client[]){
+    int trouve, pos;
+    trouve = 0;
+    pos = 9999;
+
+    for (int i = 0; i < nbClientsConnected; ++i)
+    {
+        if (strcmp(arrClientsConnected[i].pseudo,client)==0)
+        {
+            trouve = 1;
+            pos = i;
+        }
+    }
+
+    return pos;
+}
+
 void commands(Client * client){
     char *message;
     int pos;
-    pos = findPos(client);
+    pos = findClient(client);
 
     // Si on l'a trouvé on va afficher le message de commandes
     if (pos != 9999)
     {
         strcpy(message,"Voici les commandes du chat:\n");
-        strcat(message,"/who' pour savoir qui est connecté\n");
-        strcat(message,"'/w destinataire message' pour chuchoter à un autre utilisateur\n");
-        strcat(message,"'/leave' pour quitter \n'");
+        strcat(message,"'/who' pour savoir qui est connecté\n");
+        strcat(message,"'/w destinataire message' pour chuchoter un message à un destinataire\n");
+        strcat(message,"'/leave' pour quitter \n");
         strcat(message,"'/cmd' pour un rappel des commandes\n\n");
         write(arrClientsConnected[pos].socket,message,strlen(message)+1);
     }  
@@ -150,12 +170,12 @@ void printConnectedClients(Client * client){
     char *message;
     int pos;
 
-    pos = findPos(client);
+    pos = findClient(client);
 
     // Si on l'a trouvé on va afficher tous les pseudos des clients connectés au client qui le souhaite
     if (pos != 9999)
     {
-        strcpy(message,"Les clients connectés sont:\n");
+        strcpy(message,"Les clients connectés actuellement sont:\n");
         for (int j = 0; j < nbClientsConnected; ++j)
         {
             strcat(message,arrClientsConnected[j].pseudo);
@@ -176,7 +196,7 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
     printf("%s\n", message);
 
     int pos;
-    pos = findPos(client);
+    pos = findPseudo(destination);
    
     if (pos != 9999)
     {
@@ -249,7 +269,7 @@ main(int argc, char **argv) {
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
     //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5000);
+    adresse_locale.sin_port = htons(5002);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
