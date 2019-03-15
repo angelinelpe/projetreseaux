@@ -8,7 +8,6 @@ client <adresse-serveur> <message-a-transmettre>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <string.h>
-//rajouté
 #include <unistd.h>
 #include <pthread.h>
 
@@ -19,16 +18,15 @@ typedef struct servent 		servent;
 
 // Fonction d'écoute
 // Le client reste à l'écoute du serveur
-//rajouté
-static void * ecoute (void * socket_descriptor){
+static void * listenning(void * socket_descriptor){
     int* socket = (int *) socket_descriptor;
     char buffer[256];
-    int  taille;
+    int  length;
     while(1){
-        if((taille = read(*socket, buffer, (int)sizeof(buffer)))<=0){
+        if((length = read(*socket, buffer, (int)sizeof(buffer)))<=0){
         	exit(1);
         }
-        buffer[taille]='\0';
+        buffer[length]='\0';
         printf("%s \n", buffer);
     }
 }
@@ -43,17 +41,11 @@ int main(int argc, char **argv) {
     char 	buffer[256];
     char *	prog; 			/* nom du programme */
     char *	host; 			/* nom de la machine distante */
-    //rajouté
     char 	mesg[256]; 			/* message envoyé */
-    //rajouté
-	char	pseudo[30];		/* pseudo du client */
+	char	pseudo[50];		/* pseudo du client */
     pthread_t   thread_listen; 
 
-    //on a enlevé la variable suivante car on suit pas le même principe d'envoi de msg
-    //char *    mesg;           /* message envoyé */
-    //mesg = argv[2];
      
-     // rajouté 2 au lieu de 3
     if (argc != 2) {
 	perror("usage : client <adresse-serveur>");
 	exit(1);
@@ -64,7 +56,6 @@ int main(int argc, char **argv) {
     
     printf("nom de l'executable : %s \n", prog);
     printf("adresse du serveur  : %s \n", host);
-    //printf("message envoye      : %s \n", mesg);
     
     if ((ptr_host = gethostbyname(host)) == NULL) {
 	perror("erreur : impossible de trouver le serveur a partir de son adresse.");
@@ -75,29 +66,14 @@ int main(int argc, char **argv) {
     bcopy((char*)ptr_host->h_addr, (char*)&adresse_locale.sin_addr, ptr_host->h_length);
     adresse_locale.sin_family = AF_INET; /* ou ptr_host->h_addrtype; */
     
-    /* 2 facons de definir le service que l'on va utiliser a distance */
-    /* (commenter l'une ou l'autre des solutions) */
-    
-    /*-----------------------------------------------------------*/
-    /* SOLUTION 1 : utiliser un service existant, par ex. "irc" */
-    /*
-    if ((ptr_service = getservbyname("irc","tcp")) == NULL) {
-	perror("erreur : impossible de recuperer le numero de port du service desire.");
-	exit(1);
-    }
-    adresse_locale.sin_port = htons(ptr_service->s_port);
-    */
-    /*-----------------------------------------------------------*/
-    
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5002);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
     
-    /* creation du socket */
+    /* creation de la socket */
     if ((socket_descriptor = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 	perror("erreur : impossible de creer la socket de connexion avec le serveur.");
 	exit(1);
@@ -111,8 +87,7 @@ int main(int argc, char **argv) {
     
     printf("connexion etablie avec le serveur. \n\n");
 
-
-	//Saisie du pseudo 
+	printf("-----------------------------------\n");
 	printf("Veuillez saisir votre pseudo : \n");
     fgets(pseudo, sizeof pseudo, stdin);
 	pseudo[strcspn(pseudo, "\n")] = '\0'; 
@@ -121,7 +96,6 @@ int main(int argc, char **argv) {
             exit(1);
     }
   
-    // printf("envoi d'un message au serveur. \n");
       
     /* envoi du message vers le serveur */
     if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
@@ -129,25 +103,27 @@ int main(int argc, char **argv) {
 	exit(1);
     }
 
-    printf("%s, vous êtes connecté au chat !\n", pseudo);
+    printf("\n\n%s, vous êtes connecté(e) au chat !\n\n", pseudo);
+    printf("-----------------------------------\n");
     printf("Voici les commandes du chat:\n");
     printf("'/who' pour savoir qui est connecté\n");
     printf("'/w destinataire message' pour chuchoter un message à un destinataire\n");
 	printf("'/leave' pour quitter \n");
-	printf("'/cmd' pour un rappel des commandes\n\n");
+	printf("'/cmd' pour un rappel des commandes\n");
+	printf("-----------------------------------\n\n");
 
 
 
-	// Le client se met maintenant en écoute
-    pthread_create(&thread_listen, NULL, ecoute, &socket_descriptor);
+	// Création du thread client pour l'écoute
+    pthread_create(&thread_listen, NULL, listenning, &socket_descriptor);
 
-	// Tant que les messages émis sont différents de "quit"
-	while(strcmp(mesg,"quit")!=0){
+	// Tant que les messages émis sont différents de "/leave"
+	while(strcmp(mesg,"/leave")!=0){
         
         fgets(mesg, sizeof(mesg), stdin);
         mesg[strcspn(mesg, "\n")] = '\0'; 
 
-            //Le client envoie le message
+            //on envoie le message
             if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
                 perror("erreur : impossible d'ecrire le message destine au serveur.");
                 exit(1);
@@ -155,8 +131,8 @@ int main(int argc, char **argv) {
         
 
 	}
-	printf("Vous quittez le chat, au revoir et à bientôt !\n");
-    
+	printf("\nVous partez déjà ? A très vite !\n");
+	printf("-----------------------------------\n");   
     printf("\nfin de la reception.\n");
     
     close(socket_descriptor);

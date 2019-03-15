@@ -8,14 +8,12 @@ Serveur à lancer avant le client
 #include <netdb.h> 		    /* pour hostent, servent */
 #include <string.h> 		/* pour bcopy, ... */ 
 #include <pthread.h> 
-//rajouté
 #include <stdlib.h>        
 #include <unistd.h>
 
 
 #define TAILLE_MAX_NOM 256
-//rajouté
-#define MAX_CLIENTS 42 // Nombre max de clients supportés par l'application
+#define MAX_CLIENTS 100 // Nombre max de clients supportés par l'application
 
 
 typedef struct sockaddr sockaddr;
@@ -31,7 +29,7 @@ typedef struct
 	char pseudo[50];
     int socket;
     pthread_t thread;
-	int connected; // voir si on peut l'enlever
+	int connected;
 } Client;
 
 // Déclaration des procédures et fonction:
@@ -41,43 +39,43 @@ void printConnectedClients(Client * client);
 static void * renvoi (void * sender);
 void sendWhisper(Client * client, char destination[], char buffer[]);
 void sendMessageClient(Client * client, char buffer[]);
+void sendMessageServer(Client * client, int arrive, int leave);
+void welcomeMessage (Client * client);
+void byeMessage (Client * client);
 
 // Compteur du nombre de clients connectés au server
-//Rajouté
 int nbClientsConnected = 0;
 
 // Création d'un tableau de Clients dans lequel on va stocker les clients qui sont connectés
-//rajouté
-Client arrClientsConnected[MAX_CLIENTS];
+Client clientsLoggedIn[MAX_CLIENTS];
 
 
 /*------------------------------------------------------*/
 // Gestion des messages envoyés au serveur par les clients
-//rajouté
 static void * renvoi (void * sender){
     Client * client = (Client *) sender;
     char buffer[256];
     int length;
 
-    // Le client n'a pas défini son pseudo
+
+    // Tant que le client n'a pas défini son pseudo il reste en mode saisie
     while(strlen((*client).pseudo)<=1){
         length = read((*client).socket, buffer, sizeof(buffer));
-        //sleep(3);
         buffer[length]='\0'; 
         strcpy((*client).pseudo, buffer);
         write(1,buffer,length);
     }
+
+    welcomeMessage(client);
     
     while(1){
         length = read((*client).socket, buffer, sizeof(buffer));
         buffer[length]='\0';
-        //sleep(2);
-        
+
         // On extrait l'action, le destinataire et le message afin de savoir si le client veut 
         // envoyer un message sur le channel général ou chuchoter à un autre client
         char transition[sizeof(buffer)];
         strcpy(transition,buffer);
-
         char *action;
         action = strtok(buffer," ");
         char *destination;
@@ -115,7 +113,7 @@ int findClient(Client * client){
 
     for (int i = 0; i < nbClientsConnected; ++i)
     {
-        if (strcmp(arrClientsConnected[i].pseudo,client->pseudo)==0)
+        if (strcmp(clientsLoggedIn[i].pseudo,client->pseudo)==0)
         {
             trouve = 1;
             pos = i;
@@ -125,14 +123,14 @@ int findClient(Client * client){
     return pos;
 }
 
-int findPseudo(char client[]){
+int findPositionPseudo(char client[]){
     int trouve, pos;
     trouve = 0;
     pos = 9999;
 
     for (int i = 0; i < nbClientsConnected; ++i)
     {
-        if (strcmp(arrClientsConnected[i].pseudo,client)==0)
+        if (strcmp(clientsLoggedIn[i].pseudo,client)==0)
         {
             trouve = 1;
             pos = i;
@@ -150,19 +148,29 @@ void commands(Client * client){
     // Si on l'a trouvé on va afficher le message de commandes
     if (pos != 9999)
     {
-        strcpy(message,"Voici les commandes du chat:\n");
+        strcpy(message,"\nVoici les commandes du chat:\n");
         strcat(message,"'/who' pour savoir qui est connecté\n");
         strcat(message,"'/w destinataire message' pour chuchoter un message à un destinataire\n");
         strcat(message,"'/leave' pour quitter \n");
-        strcat(message,"'/cmd' pour un rappel des commandes\n\n");
-        write(arrClientsConnected[pos].socket,message,strlen(message)+1);
+        strcat(message,"'/cmd' pour un rappel des commandes\n");
+        strcat(message,"-----------------------------------\n\n");
+        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
     }  
 }
 
 void leave(Client * client){
-    printf("%s est parti du chat\n", (*client).pseudo);
-    close((*client).socket);
-    pthread_exit(NULL);
+    
+    byeMessage(client);
+    
+    int pos;
+    pos = findClient(client);
+
+    if (pos != 9999)
+    {
+        clientsLoggedIn[pos].connected = 0;
+        close((*client).socket);
+        pthread_exit(NULL);
+    }               
 }
 
 
@@ -178,15 +186,17 @@ void printConnectedClients(Client * client){
         strcpy(message,"Les clients connectés actuellement sont:\n");
         for (int j = 0; j < nbClientsConnected; ++j)
         {
-            strcat(message,arrClientsConnected[j].pseudo);
-            strcat(message,"\n");
+            if (clientsLoggedIn[j].connected == 1)
+            {
+                strcat(message,clientsLoggedIn[j].pseudo);
+                strcat(message,"\n");
+            }
         }
-        write(arrClientsConnected[pos].socket,message,strlen(message)+1);
+        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
     }  
 }
 
-// Procédure qui permet d'envoyer un message sur la console des clients
-//rajouté
+
 void sendWhisper(Client * client, char destination[], char buffer[]){
     char *message = malloc (sizeof (*message) * 256);
     // Création de la chaîne de caractère à afficher sur le chat
@@ -196,17 +206,15 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
     printf("%s\n", message);
 
     int pos;
-    pos = findPseudo(destination);
+    pos = findPositionPseudo(destination);
    
-    if (pos != 9999)
+    if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
     {
-        write(arrClientsConnected[pos].socket,message,strlen(message)+1);
+        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
     }
-
 }
 
-// Procédure qui permet d'envoyer un message de chuchotement à un client
-//rajouté
+
 void sendMessageClient(Client * client, char buffer[]){
     char *message = malloc (sizeof (*message) * 256);
     // Création de la chaîne de caractère à afficher sur le chat
@@ -215,8 +223,8 @@ void sendMessageClient(Client * client, char buffer[]){
     strcat(message,buffer);
     printf("%s\n", message);
     for (int i=0;i<nbClientsConnected;i++){
-        if(strcmp((*client).pseudo,arrClientsConnected[i].pseudo)!=0){
-            if((write(arrClientsConnected[i].socket,message,strlen(message)+1)) < 0){
+        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1)){
+            if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
                 perror("Erreur: le message n'a pas été transmit");
                 exit(1);
             } 
@@ -224,6 +232,108 @@ void sendMessageClient(Client * client, char buffer[]){
     }    
 }
 
+
+void welcomeMessage (Client * client){
+    int randomNumber = rand() % 5;
+    char *message = malloc (sizeof (*message) * 256);
+
+    switch(randomNumber){
+        case 0 : 
+            strcpy(message, (*client).pseudo);
+            strcat(message, "est là, comme la prophécie l'a décrit.");             
+        break;
+
+        case 1 : 
+            strcpy(message, "Bienvenue, ");
+            strcat(message, (*client).pseudo);
+            strcat(message, ". On éspère que t'as apporté de la pizza.");
+        break;
+        
+        case 2 :  
+            strcpy(message, "Joie, félicitée ! ");
+            strcat(message, (*client).pseudo);
+            strcat(message, " est là !");
+        break;
+        
+        case 3 : 
+            strcpy(message, "C'est un oiseau ! C'est un avion ! Non, en fait c'est juste ");
+            strcat(message, (*client).pseudo);
+            strcat(message, ".");
+        break;
+        
+        case 4 :  
+            strcpy(message, (*client).pseudo);
+            strcat(message, "est arrivé. Finit de jouer.");  
+        break;
+        
+        case 5 : 
+            strcpy(message, (*client).pseudo);
+            strcat(message, "nous a rejoin. Vite, tout le monde fait semblant d'être occupé !"); 
+        break;
+    }
+
+    
+    printf("%s\n", message);
+    for (int i=0;i<nbClientsConnected;i++){
+        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1)){
+            if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                perror("Erreur: le message n'a pas été transmit");
+                exit(1);
+            } 
+        }     
+    } 
+}
+
+void byeMessage (Client * client){
+    int randomNumber = rand() % 5;
+    char *message = malloc (sizeof (*message) * 256);
+
+    switch(randomNumber){
+        case 0 : 
+            strcpy(message, (*client).pseudo);
+            strcat(message, " nous a quitté. RIP.");             
+        break;
+
+        case 1 : 
+            strcpy(message, "Tu nous quitte déjà ");
+            strcat(message, (*client).pseudo);
+            strcat(message, " ? :(");
+        break;
+        
+        case 2 :  
+            strcpy(message, "Adieu ");
+            strcat(message, (*client).pseudo);
+            strcat(message, ", on se reverra de l'autre côté.");
+        break;
+        
+        case 3 : 
+            strcpy(message, "Tu pars sans dire au revoir ");
+            strcat(message, (*client).pseudo);
+            strcat(message, " ?");
+        break;
+        
+        case 4 :  
+            strcpy(message, (*client).pseudo);
+            strcat(message, "est parti(e). C'est bon, on peut recommencer à parler dans son dos.");  
+        break;
+        
+        case 5 : 
+            strcpy(message, (*client).pseudo);
+            strcat(message, " a préféré rejoindre un autre serveur... Zut !"); 
+        break;
+    }
+
+    
+    printf("%s\n", message);
+    for (int i=0;i<nbClientsConnected;i++){
+        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1)){
+            if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                perror("Erreur: le message n'a pas été transmit");
+                exit(1);
+            } 
+        }     
+    } 
+}
 	
 /*------------------------------------------------------*/
 
@@ -254,22 +364,9 @@ main(int argc, char **argv) {
     adresse_locale.sin_family		= ptr_hote->h_addrtype; 	/* ou AF_INET */
     adresse_locale.sin_addr.s_addr	= INADDR_ANY; 			/* ou AF_INET */
 
-    /* 2 facons de definir le service que l'on va utiliser a distance */
-    /* (commenter l'une ou l'autre des solutions) */
-    
-    /*-----------------------------------------------------------*/
-    /* SOLUTION 1 : utiliser un service existant, par ex. "irc" */
-    /*
-    if ((ptr_service = getservbyname("irc","tcp")) == NULL) {
-        perror("erreur : impossible de recuperer le numero de port du service desire.");
-        exit(1);
-    }
-    adresse_locale.sin_port = htons(ptr_service->s_port);
-    */
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    //rajouté 5001 au lieu de 5000
-    adresse_locale.sin_port = htons(5002);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
@@ -299,13 +396,12 @@ main(int argc, char **argv) {
 		
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
 		// On vérifie que le nombre max de clients n'est pas atteint
-		//rajouté à la place de la procédure en dessous
 		if (nbClientsConnected >= MAX_CLIENTS) {
 			perror("Serveur plein, nombre max de clients atteint");
 			exit(1);
 		}
 		else{
-			if(arrClientsConnected[nbClientsConnected].connected == 0){
+			if(clientsLoggedIn[nbClientsConnected].connected == 0){
 				if ((nouv_socket_descriptor = 
 					accept(socket_descriptor, 
 						   (sockaddr*)(&adresse_client_courant),
@@ -316,34 +412,16 @@ main(int argc, char **argv) {
 				}
 				// Un thread est crée pour le client
 				else{
-					arrClientsConnected[nbClientsConnected].connected = 1;
-					arrClientsConnected[nbClientsConnected].pseudo[0] = '\0';
-					arrClientsConnected[nbClientsConnected].socket = nouv_socket_descriptor;
-					pthread_create(&arrClientsConnected[nbClientsConnected].thread, NULL, renvoi, &arrClientsConnected[nbClientsConnected]);
+					clientsLoggedIn[nbClientsConnected].connected = 1;
+					clientsLoggedIn[nbClientsConnected].pseudo[0] = '\0';
+					clientsLoggedIn[nbClientsConnected].socket = nouv_socket_descriptor;
+					pthread_create(&clientsLoggedIn[nbClientsConnected].thread, NULL, renvoi, &clientsLoggedIn[nbClientsConnected]);
 					nbClientsConnected++;
 				}
 			}
 		}
-
-		/* adresse_client_courant sera renseigné par accept via les infos du connect 
-        if ((nouv_socket_descriptor = 
-            accept(socket_descriptor, 
-                   (sockaddr*)(&adresse_client_courant),
-                   &longueur_adresse_courante))
-             < 0) {
-            perror("erreur : impossible d'accepter la connexion avec le client.");
-            exit(1);
-        }
-        
-        // traitement du message 
-        printf("reception d'un message.\n");
-        
-        renvoi(nouv_socket_descriptor);
-                        
-        close(nouv_socket_descriptor); */
 	}
 
-	//rajouté	
 	return 0;
     
 }
