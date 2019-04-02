@@ -128,8 +128,6 @@ int main(int argc, char **argv) {
                 perror("erreur : impossible d'ecrire le message destine au serveur.");
                 exit(1);
             }
-        
-
 	}
 	printf("\nVous partez déjà ? A très vite !\n");
 	printf("-----------------------------------\n");   

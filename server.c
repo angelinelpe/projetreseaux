@@ -30,6 +30,7 @@ typedef struct
     int socket;
     pthread_t thread;
 	int connected;
+    char channel[100];
 } Client;
 
 // Déclaration des procédures et fonction:
@@ -86,6 +87,9 @@ static void * renvoi (void * sender){
         if(strcmp(buffer, "/leave")==0){
             //Si le client souhaite quitter le chat
             leave(client);
+
+        }else if (strcmp(buffer,"/join")==0){
+            
 
         }else if (strcmp(buffer,"/who")==0){
             //Si le client souhaite savoir qui est connecté
