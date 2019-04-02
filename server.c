@@ -37,12 +37,14 @@ typedef struct
 void commands(Client * client);
 void leave(Client * client);
 void printConnectedClients(Client * client);
+int findClient(Client * client);
 static void * renvoi (void * sender);
 void sendWhisper(Client * client, char destination[], char buffer[]);
 void sendMessageClient(Client * client, char buffer[]);
 void sendMessageServer(Client * client, int arrive, int leave);
 void welcomeMessage (Client * client);
 void byeMessage (Client * client);
+void join(Client * client, char channel[]);
 
 // Compteur du nombre de clients connectés au server
 int nbClientsConnected = 0;
@@ -88,8 +90,9 @@ static void * renvoi (void * sender){
             //Si le client souhaite quitter le chat
             leave(client);
 
-        }else if (strcmp(buffer,"/join")==0){
-            
+        }else if (strcmp(action,"/join")==0){
+            //Si le client souhaire rejoindre un channel
+            join(client, destination);
 
         }else if (strcmp(buffer,"/who")==0){
             //Si le client souhaite savoir qui est connecté
@@ -108,6 +111,42 @@ static void * renvoi (void * sender){
             sendMessageClient(client, transition);  
         }
     }
+}
+
+void join(Client * client, char channel[]){
+    char *message = malloc (sizeof (*message) * 256);
+    // Création de la chaîne de caractère à afficher sur le chat
+    strcpy(message, (*client).pseudo);
+    strcat(message," vous entrez dans le channel ");
+    strcat(message,channel);
+
+    //Envoi du message au client 
+    int pos;
+    pos = findClient(client);
+   
+    if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+    {
+        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+    }
+
+    strcpy(message, (*client).pseudo);
+    strcat(message," a rejoint le channel ");
+    strcat(message,channel);
+    printf("%s\n", message);
+
+
+    for (int i=0;i<nbClientsConnected;i++){
+        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel, channel)){
+            if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                perror("Erreur: le message n'a pas été transmit");
+                exit(1);
+            } 
+        }     
+    }   
+
+
+    strcpy((*client).channel, channel);
+
 }
 
 int findClient(Client * client){
