@@ -13,7 +13,8 @@ Serveur à lancer avant le client
 
 
 #define TAILLE_MAX_NOM 256
-#define MAX_CLIENTS 100 // Nombre max de clients supportés par l'application
+#define MAX_CLIENTS 100 
+#define MAX_CHANNELS 100  
 
 
 typedef struct sockaddr sockaddr;
@@ -33,6 +34,12 @@ typedef struct
     char channel[100];
 } Client;
 
+typedef struct 
+{
+    char channel[100];
+    char password[100];
+} Channel;
+
 // Déclaration des procédures et fonction:
 void commands(Client * client);
 void leave(Client * client);
@@ -44,13 +51,19 @@ void sendMessageClient(Client * client, char buffer[]);
 void sendMessageServer(Client * client, int arrive, int leave);
 void welcomeMessage (Client * client);
 void byeMessage (Client * client);
-void join(Client * client, char channel[]);
+void join(Client * client, char channel[], char password[]);
+int comparePassword(int position, char password[]);
+int findChannel(char channel[]);
+int chanExists(char channel[]);
+
 
 // Compteur du nombre de clients connectés au server
 int nbClientsConnected = 0;
+int nbChannels = 0;
 
 // Création d'un tableau de Clients dans lequel on va stocker les clients qui sont connectés
 Client clientsLoggedIn[MAX_CLIENTS];
+Channel channels[MAX_CHANNELS];
 
 
 /*------------------------------------------------------*/
@@ -92,7 +105,7 @@ static void * renvoi (void * sender){
 
         }else if (strcmp(action,"/join")==0){
             //Si le client souhaire rejoindre un channel
-            join(client, destination);
+            join(client, destination, message);
 
         }else if (strcmp(buffer,"/who")==0){
             //Si le client souhaite savoir qui est connecté
@@ -113,52 +126,133 @@ static void * renvoi (void * sender){
     }
 }
 
-void join(Client * client, char channel[]){
-    char *message = malloc (sizeof (*message) * 256);
-    // Création de la chaîne de caractère à afficher sur le chat
-    strcpy(message, (*client).pseudo);
-    strcat(message," vous entrez dans le channel ");
-    strcat(message,channel);
+void join(Client * client, char chan[], char pwd[]){
+    int exists;
+    exists = chanExists(chan);
 
-    //Envoi du message au client 
     int pos;
     pos = findClient(client);
-   
-    if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-    {
-        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
-    }
 
-    strcpy(message, (*client).pseudo);
-    strcat(message," a rejoint le channel ");
-    strcat(message,channel);
-    printf("%s\n", message);
+    char *message = malloc (sizeof (*message) * 256);
+
+    if (exists == 0)
+    { 
+        channels[nbChannels].channel[0] = *chan;
+        channels[nbChannels].password[0] = *pwd;
+        nbChannels ++;  
+        //message le channel a été créé  
+        printf("%s, %s\n",chan,pwd );
+        printf("LE CHAN N'EXISTE PAS\n");    
+    }else {
+        printf("%s, %s\n",chan,pwd );
+        printf("LE CHAN EXISTE\n");
+       /* int posChannel;
+        posChannel = findChannel(chan);
+        int passwordOk;
+        passwordOk = comparePassword(posChannel, pwd);
+        if (passwordOk = 1)
+        {
+            // Création de la chaîne de caractère à afficher sur le chat
+            strcpy(message, (*client).pseudo);
+            strcat(message," vous entrez dans le channel ");
+            strcat(message,chan);
+
+            //Envoi du message au client 
+            
+           
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+            {
+                write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+            }
+
+            strcpy(message, (*client).pseudo);
+            strcat(message," a rejoint le channel ");
+            strcat(message,chan);
+            printf("%s\n", message);
 
 
-    for (int i=0;i<nbClientsConnected;i++){
-        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel, channel)){
-            if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+            for (int i=0;i<nbClientsConnected;i++){
+                if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel, chan)){
+                    if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                        perror("Erreur: le message n'a pas été transmit");
+                        exit(1);
+                    } 
+                }     
+            }   
+
+
+            strcpy((*client).channel, chan);
+
+        } else {
+            strcpy(message, "Mot de passe incorrect");
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+            {
+                if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
                 perror("Erreur: le message n'a pas été transmit");
                 exit(1);
-            } 
-        }     
-    }   
+                } 
+            }
+
+        }*/
+
+    }    
+}
 
 
-    strcpy((*client).channel, channel);
+int comparePassword(int position, char password[]){
+    int passwordOk;
 
+    if (strcmp(channels[position].password, password)==0)
+    {
+        passwordOk = 1;
+    } else {
+        passwordOk = 0;
+    }
+
+    return passwordOk;
+}
+
+int findChannel(char channel[]){
+    int pos;
+    pos = 9999;
+
+    for (int i = 0; i < nbChannels; ++i)
+    {
+        if (strcmp(channels[i].channel, channel))
+        {
+            pos = i;
+        }
+    }
+
+    return pos;
+}
+
+int chanExists(char channel[]){
+
+    int trouve = 0;
+    printf("trouve = %d\n", trouve);
+
+    for (int i = 0; i < nbChannels; ++i)
+    {
+        printf("%s, %s\n",channels[i].channel,channel );
+        if (strcmp(channels[i].channel,channel)==0)
+        {
+            printf("trouvé : %s, %s\n",channels[i].channel,channel );
+            trouve = 1;
+        }
+    }
+
+    return trouve;
 }
 
 int findClient(Client * client){
-    int trouve, pos;
-    trouve = 0;
+    int pos;
     pos = 9999;
 
     for (int i = 0; i < nbClientsConnected; ++i)
     {
         if (strcmp(clientsLoggedIn[i].pseudo,client->pseudo)==0)
         {
-            trouve = 1;
             pos = i;
         }
     }
@@ -167,15 +261,13 @@ int findClient(Client * client){
 }
 
 int findPositionPseudo(char client[]){
-    int trouve, pos;
-    trouve = 0;
+    int pos;
     pos = 9999;
 
     for (int i = 0; i < nbClientsConnected; ++i)
     {
         if (strcmp(clientsLoggedIn[i].pseudo,client)==0)
         {
-            trouve = 1;
             pos = i;
         }
     }
@@ -409,7 +501,7 @@ main(int argc, char **argv) {
 
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5000);
+    adresse_locale.sin_port = htons(5002);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
