@@ -115,6 +115,10 @@ static void * renvoi (void * sender){
             //Si le client souhaite chuchoter à un autre client
             sendWhisper(client, destination, message);
 
+        } else if (strcmp(action,"/chan")==0){
+            //Si le client souhaite parler dans le chan
+            sendToChan(client,destination,message);
+
         }else if (strcmp(buffer,"/cmd")==0){
             //Si le cliend souhaite un rappel des commandes du chat
             commands(client);
@@ -126,6 +130,53 @@ static void * renvoi (void * sender){
     }
 }
 
+void sendToChan(Client * client, char destination[], char buffer[]){
+    char *message = malloc (sizeof (*message) * 256);
+    // Création de la chaîne de caractère à afficher sur le chat
+    strcpy(message, (*client).pseudo);
+    strcat(message," au channel ");
+    strcat(message, destination);
+    strcat(message," : ");
+    strcat(message,buffer);
+    printf("%s\n", message);
+
+    //test si chan existe
+    int exists;
+    exists = chanExists(destination);
+
+    if (exists == 1)
+    {
+        strcpy(message, (*client).pseudo);
+        strcat(message," au channel ");
+        strcat(message, destination);
+        strcat(message," : ");
+        strcat(message,buffer);
+        printf("%s\n", message);
+        for (int i=0;i<nbClientsConnected;i++){
+            if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel,destination)==0){
+                if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                    perror("Erreur: le message n'a pas été transmit");
+                    exit(1);
+                } 
+            }     
+        } 
+    } else {
+        strcpy(message, "Erreur, vous n'êtes pas dans le channel ou il n'existe pas.");
+        printf("%s\n", message);
+
+        int pos;
+        pos = findClient(client);
+
+        if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+        {
+            write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+        }
+
+    }
+    //si oui on envoie le message à tous ceux du chan
+    //sinon on dit que le chan n'existe pas
+}
+
 void join(Client * client, char chan[], char pwd[]){
     int exists;
     exists = chanExists(chan);
@@ -133,57 +184,30 @@ void join(Client * client, char chan[], char pwd[]){
     int pos;
     pos = findClient(client);
 
+    int enter;
+    enter = 0;
+
     char *message = malloc (sizeof (*message) * 256);
 
     if (exists == 0)
     { 
-        channels[nbChannels].channel[0] = *chan;
-        channels[nbChannels].password[0] = *pwd;
+        strcpy(channels[nbChannels].channel, chan);
+        strcpy(channels[nbChannels].password, pwd);
         nbChannels ++;  
-        //message le channel a été créé  
-        printf("%s, %s\n",chan,pwd );
-        printf("LE CHAN N'EXISTE PAS\n");    
+        enter = 1;
+
+        //message le channel a été créé     
     }else {
-        printf("%s, %s\n",chan,pwd );
-        printf("LE CHAN EXISTE\n");
-       /* int posChannel;
+        int posChannel;
         posChannel = findChannel(chan);
+        printf("%d\n",posChannel );
         int passwordOk;
         passwordOk = comparePassword(posChannel, pwd);
-        if (passwordOk = 1)
+
+        if (passwordOk == 0)
         {
-            // Création de la chaîne de caractère à afficher sur le chat
-            strcpy(message, (*client).pseudo);
-            strcat(message," vous entrez dans le channel ");
-            strcat(message,chan);
-
-            //Envoi du message au client 
+            printf("password nok\n");
             
-           
-            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-            {
-                write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
-            }
-
-            strcpy(message, (*client).pseudo);
-            strcat(message," a rejoint le channel ");
-            strcat(message,chan);
-            printf("%s\n", message);
-
-
-            for (int i=0;i<nbClientsConnected;i++){
-                if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel, chan)){
-                    if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
-                        perror("Erreur: le message n'a pas été transmit");
-                        exit(1);
-                    } 
-                }     
-            }   
-
-
-            strcpy((*client).channel, chan);
-
-        } else {
             strcpy(message, "Mot de passe incorrect");
             if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
             {
@@ -192,16 +216,53 @@ void join(Client * client, char chan[], char pwd[]){
                 exit(1);
                 } 
             }
+             
 
-        }*/
+        } else { 
+            enter = 1;
+        }
 
-    }    
+    }   
+    if (enter == 1)
+    {
+        printf("password ok\n");
+        
+        // Création de la chaîne de caractère à afficher sur le chat
+        strcpy(message," Vous entrez dans le channel ");
+        strcat(message,chan);
+
+        //Envoi du message au client 
+       
+        if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+        {
+            write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+        }
+
+        strcpy(message, (*client).pseudo);
+        strcat(message," a rejoint le channel ");
+        strcat(message,chan);
+        printf("%s\n", message);
+
+
+        for (int i=0;i<nbClientsConnected;i++){
+            if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel, chan)==0){
+                if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                    perror("Erreur: le message n'a pas été transmit");
+                    exit(1);
+                } 
+            }     
+        }   
+
+
+        strcpy((*client).channel, chan);
+    } 
 }
 
 
 int comparePassword(int position, char password[]){
     int passwordOk;
 
+    printf("%s, %s\n", channels[position].password, password);
     if (strcmp(channels[position].password, password)==0)
     {
         passwordOk = 1;
@@ -218,11 +279,13 @@ int findChannel(char channel[]){
 
     for (int i = 0; i < nbChannels; ++i)
     {
-        if (strcmp(channels[i].channel, channel))
+        printf("find channel: %s, %s\n", channels[i].channel, channel );
+        if (strcmp(channels[i].channel, channel)==0)
         {
             pos = i;
         }
     }
+    printf("%d\n", pos);
 
     return pos;
 }
@@ -501,7 +564,7 @@ main(int argc, char **argv) {
 
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5002);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
@@ -548,6 +611,7 @@ main(int argc, char **argv) {
 				// Un thread est crée pour le client
 				else{
 					clientsLoggedIn[nbClientsConnected].connected = 1;
+                    strcpy(clientsLoggedIn[nbClientsConnected].channel,"test");
 					clientsLoggedIn[nbClientsConnected].pseudo[0] = '\0';
 					clientsLoggedIn[nbClientsConnected].socket = nouv_socket_descriptor;
 					pthread_create(&clientsLoggedIn[nbClientsConnected].thread, NULL, renvoi, &clientsLoggedIn[nbClientsConnected]);
