@@ -55,6 +55,8 @@ void join(Client * client, char channel[], char password[]);
 int comparePassword(int position, char password[]);
 int findChannel(char channel[]);
 int chanExists(char channel[]);
+void sendToChan(Client * client, char destination[], char buffer[]);
+int connectedToChan(Client * client, char channel[]);
 
 
 // Compteur du nombre de clients connectés au server
@@ -145,23 +147,42 @@ void sendToChan(Client * client, char destination[], char buffer[]){
     exists = chanExists(destination);
 
     if (exists == 1)
-    {
-        strcpy(message, (*client).pseudo);
-        strcat(message," au channel ");
-        strcat(message, destination);
-        strcat(message," : ");
-        strcat(message,buffer);
-        printf("%s\n", message);
-        for (int i=0;i<nbClientsConnected;i++){
-            if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel,destination)==0){
-                if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+    {   
+        int connected;
+        connected = connectedToChan(client,destination);
+        if (connected == 1)
+        {
+            strcpy(message, (*client).pseudo);
+            strcat(message," au channel ");
+            strcat(message, destination);
+            strcat(message," : ");
+            strcat(message,buffer);
+            printf("%s\n", message);
+            for (int i=0;i<nbClientsConnected;i++){
+                if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel,destination)==0){
+                    if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
+                        perror("Erreur: le message n'a pas été transmit");
+                        exit(1);
+                    } 
+                }     
+            }           
+        } else {
+            strcpy(message, "Erreur, vous n'êtes pas dans le channel.");
+            printf("%s\n", message);
+
+            int pos;
+            pos = findClient(client);
+
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+            {
+                if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
                     perror("Erreur: le message n'a pas été transmit");
                     exit(1);
-                } 
-            }     
-        } 
-    } else {
-        strcpy(message, "Erreur, vous n'êtes pas dans le channel ou il n'existe pas.");
+                }
+            }
+        }   
+    } else {        
+        strcpy(message, "Erreur,le channel n'existe pas.");
         printf("%s\n", message);
 
         int pos;
@@ -169,12 +190,22 @@ void sendToChan(Client * client, char destination[], char buffer[]){
 
         if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
         {
-            write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+            if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
+                perror("Erreur: le message n'a pas été transmit");
+                exit(1);
+            }
         }
-
     }
-    //si oui on envoie le message à tous ceux du chan
-    //sinon on dit que le chan n'existe pas
+}
+
+int connectedToChan(Client * client, char channel[]){
+    int pos;
+    pos = findClient(client);
+
+    if (pos != 9999 && strcmp(clientsLoggedIn[pos].channel, channel)==0)
+    {
+        return 1;
+    } else return 0;
 }
 
 void join(Client * client, char chan[], char pwd[]){
@@ -195,8 +226,7 @@ void join(Client * client, char chan[], char pwd[]){
         strcpy(channels[nbChannels].password, pwd);
         nbChannels ++;  
         enter = 1;
-
-        //message le channel a été créé     
+    
     }else {
         int posChannel;
         posChannel = findChannel(chan);
@@ -204,19 +234,15 @@ void join(Client * client, char chan[], char pwd[]){
         int passwordOk;
         passwordOk = comparePassword(posChannel, pwd);
 
-        if (passwordOk == 0)
-        {
-            printf("password nok\n");
+        if (passwordOk == 0){           
             
-            strcpy(message, "Mot de passe incorrect");
-            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-            {
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
+                strcpy(message, "Mot de passe incorrect");
                 if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
-                perror("Erreur: le message n'a pas été transmit");
-                exit(1);
+                    perror("Erreur: le message n'a pas été transmit");
+                    exit(1);
                 } 
-            }
-             
+            }      
 
         } else { 
             enter = 1;
@@ -225,24 +251,22 @@ void join(Client * client, char chan[], char pwd[]){
     }   
     if (enter == 1)
     {
-        printf("password ok\n");
-        
-        // Création de la chaîne de caractère à afficher sur le chat
         strcpy(message," Vous entrez dans le channel ");
         strcat(message,chan);
 
         //Envoi du message au client 
        
-        if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-        {
-            write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+        if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
+            if ((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
+                perror("Erreur: le message n'a pas été transmit");
+                    exit(1);
+            }   
         }
 
         strcpy(message, (*client).pseudo);
         strcat(message," a rejoint le channel ");
         strcat(message,chan);
         printf("%s\n", message);
-
 
         for (int i=0;i<nbClientsConnected;i++){
             if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1) && strcmp(clientsLoggedIn[i].channel, chan)==0){
@@ -263,8 +287,7 @@ int comparePassword(int position, char password[]){
     int passwordOk;
 
     printf("%s, %s\n", channels[position].password, password);
-    if (strcmp(channels[position].password, password)==0)
-    {
+    if (strcmp(channels[position].password, password)==0){
         passwordOk = 1;
     } else {
         passwordOk = 0;
@@ -277,15 +300,11 @@ int findChannel(char channel[]){
     int pos;
     pos = 9999;
 
-    for (int i = 0; i < nbChannels; ++i)
-    {
-        printf("find channel: %s, %s\n", channels[i].channel, channel );
-        if (strcmp(channels[i].channel, channel)==0)
-        {
+    for (int i = 0; i < nbChannels; ++i){
+        if (strcmp(channels[i].channel, channel)==0){
             pos = i;
         }
     }
-    printf("%d\n", pos);
 
     return pos;
 }
@@ -293,13 +312,9 @@ int findChannel(char channel[]){
 int chanExists(char channel[]){
 
     int trouve = 0;
-    printf("trouve = %d\n", trouve);
 
-    for (int i = 0; i < nbChannels; ++i)
-    {
-        printf("%s, %s\n",channels[i].channel,channel );
-        if (strcmp(channels[i].channel,channel)==0)
-        {
+    for (int i = 0; i < nbChannels; ++i){
+        if (strcmp(channels[i].channel,channel)==0){
             printf("trouvé : %s, %s\n",channels[i].channel,channel );
             trouve = 1;
         }
@@ -312,10 +327,8 @@ int findClient(Client * client){
     int pos;
     pos = 9999;
 
-    for (int i = 0; i < nbClientsConnected; ++i)
-    {
-        if (strcmp(clientsLoggedIn[i].pseudo,client->pseudo)==0)
-        {
+    for (int i = 0; i < nbClientsConnected; ++i){
+        if (strcmp(clientsLoggedIn[i].pseudo,client->pseudo)==0){
             pos = i;
         }
     }
@@ -327,10 +340,8 @@ int findPositionPseudo(char client[]){
     int pos;
     pos = 9999;
 
-    for (int i = 0; i < nbClientsConnected; ++i)
-    {
-        if (strcmp(clientsLoggedIn[i].pseudo,client)==0)
-        {
+    for (int i = 0; i < nbClientsConnected; ++i){
+        if (strcmp(clientsLoggedIn[i].pseudo,client)==0){
             pos = i;
         }
     }
@@ -343,16 +354,20 @@ void commands(Client * client){
     int pos;
     pos = findClient(client);
 
-    // Si on l'a trouvé on va afficher le message de commandes
-    if (pos != 9999)
-    {
+    if (pos != 9999){
         strcpy(message,"\nVoici les commandes du chat:\n");
         strcat(message,"'/who' pour savoir qui est connecté\n");
         strcat(message,"'/w destinataire message' pour chuchoter un message à un destinataire\n");
+        strcat(message,"'/join channel motDePasse' pour rejoindre un channel. Si il n'exste pas il sera créé. Vous ne pouvez rejoindre qu'un seul channel à la fois.\n");
+        strcat(message,"'/chan channel message' pour chuchoter un message à un channel\n");
         strcat(message,"'/leave' pour quitter \n");
         strcat(message,"'/cmd' pour un rappel des commandes\n");
         strcat(message,"-----------------------------------\n\n");
-        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+        if ((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
+            perror("Erreur: le message n'a pas été transmit");
+            exit(1);
+        }
+        
     }  
 }
 
@@ -363,8 +378,7 @@ void leave(Client * client){
     int pos;
     pos = findClient(client);
 
-    if (pos != 9999)
-    {
+    if (pos != 9999){
         clientsLoggedIn[pos].connected = 0;
         close((*client).socket);
         pthread_exit(NULL);
@@ -378,19 +392,18 @@ void printConnectedClients(Client * client){
 
     pos = findClient(client);
 
-    // Si on l'a trouvé on va afficher tous les pseudos des clients connectés au client qui le souhaite
-    if (pos != 9999)
-    {
+    if (pos != 9999){
         strcpy(message,"Les clients connectés actuellement sont:\n");
-        for (int j = 0; j < nbClientsConnected; ++j)
-        {
-            if (clientsLoggedIn[j].connected == 1)
-            {
+        for (int j = 0; j < nbClientsConnected; ++j){
+            if (clientsLoggedIn[j].connected == 1){
                 strcat(message,clientsLoggedIn[j].pseudo);
                 strcat(message,"\n");
             }
         }
-        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+        if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
+            perror("Erreur: le message n'a pas été transmit");
+            exit(1);
+        }
     }  
 }
 
@@ -408,7 +421,10 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
    
     if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
     {
-        write(clientsLoggedIn[pos].socket,message,strlen(message)+1);
+        if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
+            perror("Erreur: le message n'a pas été transmit");
+            exit(1);
+        }
     }
 }
 
@@ -438,7 +454,7 @@ void welcomeMessage (Client * client){
     switch(randomNumber){
         case 0 : 
             strcpy(message, (*client).pseudo);
-            strcat(message, "est là, comme la prophécie l'a décrit.");             
+            strcat(message, " est là, comme la prophécie l'a décrit.");             
         break;
 
         case 1 : 
@@ -461,19 +477,19 @@ void welcomeMessage (Client * client){
         
         case 4 :  
             strcpy(message, (*client).pseudo);
-            strcat(message, "est arrivé. Finit de jouer.");  
+            strcat(message, " est arrivé. Finit de jouer.");  
         break;
         
         case 5 : 
             strcpy(message, (*client).pseudo);
-            strcat(message, "nous a rejoin. Vite, tout le monde fait semblant d'être occupé !"); 
+            strcat(message, " nous a rejoin. Vite, tout le monde fait semblant d'être occupé !"); 
         break;
     }
 
     
     printf("%s\n", message);
     for (int i=0;i<nbClientsConnected;i++){
-        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1)){
+        if(clientsLoggedIn[i].connected == 1){
             if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
                 perror("Erreur: le message n'a pas été transmit");
                 exit(1);
@@ -512,7 +528,7 @@ void byeMessage (Client * client){
         
         case 4 :  
             strcpy(message, (*client).pseudo);
-            strcat(message, "est parti(e). C'est bon, on peut recommencer à parler dans son dos.");  
+            strcat(message, " est parti(e). C'est bon, on peut recommencer à parler dans son dos.");  
         break;
         
         case 5 : 
@@ -524,7 +540,7 @@ void byeMessage (Client * client){
     
     printf("%s\n", message);
     for (int i=0;i<nbClientsConnected;i++){
-        if(strcmp((*client).pseudo,clientsLoggedIn[i].pseudo)!=0 && (clientsLoggedIn[i].connected == 1)){
+        if(clientsLoggedIn[i].connected == 1){
             if((write(clientsLoggedIn[i].socket,message,strlen(message)+1)) < 0){
                 perror("Erreur: le message n'a pas été transmit");
                 exit(1);

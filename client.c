@@ -108,6 +108,8 @@ int main(int argc, char **argv) {
     printf("Voici les commandes du chat:\n");
     printf("'/who' pour savoir qui est connecté\n");
     printf("'/w destinataire message' pour chuchoter un message à un destinataire\n");
+    printf("'/join channel motDePasse' pour rejoindre un channel. Si il n'exste pas il sera créé. Vous ne pouvez rejoindre qu'un channel à la fois.\n");
+    printf("'/chan channel message' pour chuchoter un message à un channel\n");
 	printf("'/leave' pour quitter \n");
 	printf("'/cmd' pour un rappel des commandes\n");
 	printf("-----------------------------------\n\n");
