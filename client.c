@@ -16,12 +16,11 @@ typedef struct sockaddr_in 	sockaddr_in;
 typedef struct hostent 		hostent;
 typedef struct servent 		servent;
 
-// Fonction d'écoute
-// Le client reste à l'écoute du serveur
-static void * listenning(void * socket_descriptor){
+static void * clientManager(void * socket_descriptor){
+    int  length;
     int* socket = (int *) socket_descriptor;
     char buffer[256];
-    int  length;
+    
     while(1){
         if((length = read(*socket, buffer, (int)sizeof(buffer)))<=0){
         	exit(1);
@@ -88,7 +87,7 @@ int main(int argc, char **argv) {
     printf("connexion etablie avec le serveur. \n\n");
 
 	printf("-----------------------------------\n");
-	printf("Veuillez saisir votre pseudo : \n");
+	printf("Merci de choisir votre pseudo\n");
     fgets(pseudo, sizeof pseudo, stdin);
 	pseudo[strcspn(pseudo, "\n")] = '\0'; 
     if ((write(socket_descriptor, pseudo, strlen(pseudo))) < 0) {
@@ -117,7 +116,7 @@ int main(int argc, char **argv) {
 
 
 	// Création du thread client pour l'écoute
-    pthread_create(&thread_listen, NULL, listenning, &socket_descriptor);
+    pthread_create(&thread_listen, NULL, clientManager, &socket_descriptor);
 
 	// Tant que les messages émis sont différents de "/leave"
 	while(strcmp(mesg,"/leave")!=0){

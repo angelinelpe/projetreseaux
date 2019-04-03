@@ -45,7 +45,7 @@ void commands(Client * client);
 void leave(Client * client);
 void printConnectedClients(Client * client);
 int findClient(Client * client);
-static void * renvoi (void * sender);
+static void * serverManager (void * sender);
 void sendWhisper(Client * client, char destination[], char buffer[]);
 void sendMessageClient(Client * client, char buffer[]);
 void sendMessageServer(Client * client, int arrive, int leave);
@@ -70,7 +70,7 @@ Channel channels[MAX_CHANNELS];
 
 /*------------------------------------------------------*/
 // Gestion des messages envoyés au serveur par les clients
-static void * renvoi (void * sender){
+static void * serverManager (void * sender){
     Client * client = (Client *) sender;
     char buffer[256];
     int length;
@@ -482,7 +482,7 @@ void welcomeMessage (Client * client){
         
         case 5 : 
             strcpy(message, (*client).pseudo);
-            strcat(message, " nous a rejoin. Vite, tout le monde fait semblant d'être occupé !"); 
+            strcat(message, " nous a rejoint. Vite, tout le monde fait semblant d'être occupé !"); 
         break;
     }
 
@@ -611,7 +611,7 @@ main(int argc, char **argv) {
 		/* adresse_client_courant sera renseigné par accept via les infos du connect */
 		// On vérifie que le nombre max de clients n'est pas atteint
 		if (nbClientsConnected >= MAX_CLIENTS) {
-			perror("Serveur plein, nombre max de clients atteint");
+			perror("Impossible d'ajouter un client car le serveur est plein !");
 			exit(1);
 		}
 		else{
@@ -621,7 +621,7 @@ main(int argc, char **argv) {
 						   (sockaddr*)(&adresse_client_courant),
 						   &longueur_adresse_courante))
 					 < 0) {
-					perror("erreur : impossible d'accepter la connexion avec le client.");
+					perror("erreur: echec de la création du client");
 					exit(1);
 				}
 				// Un thread est crée pour le client
@@ -630,7 +630,7 @@ main(int argc, char **argv) {
                     strcpy(clientsLoggedIn[nbClientsConnected].channel,"test");
 					clientsLoggedIn[nbClientsConnected].pseudo[0] = '\0';
 					clientsLoggedIn[nbClientsConnected].socket = nouv_socket_descriptor;
-					pthread_create(&clientsLoggedIn[nbClientsConnected].thread, NULL, renvoi, &clientsLoggedIn[nbClientsConnected]);
+					pthread_create(&clientsLoggedIn[nbClientsConnected].thread, NULL, serverManager, &clientsLoggedIn[nbClientsConnected]);
 					nbClientsConnected++;
 				}
 			}
