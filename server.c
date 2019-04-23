@@ -57,6 +57,7 @@ int findChannel(char channel[]);
 int chanExists(char channel[]);
 void sendToChan(Client * client, char destination[], char buffer[]);
 int connectedToChan(Client * client, char channel[]);
+int pseudoExists(char pseudo[]);
 
 
 // Compteur du nombre de clients connectés au server
@@ -74,14 +75,27 @@ static void * serverManager (void * sender){
     Client * client = (Client *) sender;
     char buffer[256];
     int length;
+    int exists;
 
 
     // Tant que le client n'a pas défini son pseudo il reste en mode saisie
     while(strlen((*client).pseudo)<=1){
         length = read((*client).socket, buffer, sizeof(buffer));
         buffer[length]='\0'; 
-        strcpy((*client).pseudo, buffer);
-        write(1,buffer,length);
+        exists = pseudoExists(buffer);
+        if (exists == 1)
+        {
+            char *message = malloc (sizeof (*message) * 256);
+            strcpy(message,"Ce pseudo est déjà prit ! Merci d'en saisir un autre.");
+            if((write((*client).socket,message,strlen(message)+1)) < 0){
+                        perror("Erreur: le message n'a pas été transmit");
+                        exit(1);
+                    } 
+        } else {
+            strcpy((*client).pseudo, buffer);
+            write(1,buffer,length);
+        }
+        
     }
 
     welcomeMessage(client);
@@ -130,6 +144,21 @@ static void * serverManager (void * sender){
             sendMessageClient(client, transition);  
         }
     }
+}
+
+
+int pseudoExists(char pseudo[]){
+    int equal;
+    equal = 0;
+    for (int i = 0; i < nbClientsConnected; ++i)
+    {
+        if (strcmp(pseudo,clientsLoggedIn[i].pseudo)==0)
+        {
+            equal = 1;
+        }
+    }
+
+    return equal;
 }
 
 void sendToChan(Client * client, char destination[], char buffer[]){
