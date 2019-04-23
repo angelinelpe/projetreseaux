@@ -259,7 +259,6 @@ void join(Client * client, char chan[], char pwd[]){
     }else {
         int posChannel;
         posChannel = findChannel(chan);
-        printf("%d\n",posChannel );
         int passwordOk;
         passwordOk = comparePassword(posChannel, pwd);
 
@@ -315,7 +314,6 @@ void join(Client * client, char chan[], char pwd[]){
 int comparePassword(int position, char password[]){
     int passwordOk;
 
-    printf("%s, %s\n", channels[position].password, password);
     if (strcmp(channels[position].password, password)==0){
         passwordOk = 1;
     } else {
@@ -344,7 +342,6 @@ int chanExists(char channel[]){
 
     for (int i = 0; i < nbChannels; ++i){
         if (strcmp(channels[i].channel,channel)==0){
-            printf("trouvé : %s, %s\n",channels[i].channel,channel );
             trouve = 1;
         }
     }
