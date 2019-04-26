@@ -653,7 +653,7 @@ main(int argc, char **argv) {
 				// Un thread est crée pour le client
 				else{
 					clientsLoggedIn[nbClientsConnected].connected = 1;
-                    strcpy(clientsLoggedIn[nbClientsConnected].channel,"test");
+                    strcpy(clientsLoggedIn[nbClientsConnected].channel,"'\0'");
 					clientsLoggedIn[nbClientsConnected].pseudo[0] = '\0';
 					clientsLoggedIn[nbClientsConnected].socket = nouv_socket_descriptor;
 					pthread_create(&clientsLoggedIn[nbClientsConnected].thread, NULL, serverManager, &clientsLoggedIn[nbClientsConnected]);
