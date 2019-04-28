@@ -440,18 +440,53 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
     strcpy(message, (*client).pseudo);
     strcat(message," vous chuchote : ");
     strcat(message,buffer);
-    printf("%s\n", message);
 
     int pos;
-    pos = findPositionPseudo(destination);
+
+    if (strcmp(client->pseudo,destination)==0){
+        pos = findClient(client);
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+            {
+                strcpy(message, "Vous tentez de parler tout seul ? C'est étrange ...");
+                if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
+                    perror("Erreur: le message n'a pas été transmit");
+                    exit(1);
+                }
+            }
+    } else {
+        pos = findPositionPseudo(destination);
    
-    if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-    {
-        if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
-            perror("Erreur: le message n'a pas été transmit");
-            exit(1);
+        if (pos != 9999)
+        {
+            if (clientsLoggedIn[pos].connected == 1)
+            {
+                if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
+                perror("Erreur: le message n'a pas été transmit");
+                exit(1);
+                }
+            } else {
+                pos = findClient(client);
+                if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+                {
+                    strcpy(message, "Le client n'est pas connecté");
+                    if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
+                        perror("Erreur: le message n'a pas été transmit");
+                        exit(1);
+                    }
+                }
+            }     
+        } else {
+            pos = findClient(client);
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
+            {
+                strcpy(message, "Le pseudo n'existe pas.");
+                if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
+                    perror("Erreur: le message n'a pas été transmit");
+                    exit(1);
+                }
+            }
         }
-    }
+    }   
 }
 
 
@@ -606,7 +641,7 @@ main(int argc, char **argv) {
 
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5000);
+    adresse_locale.sin_port = htons(5003);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
