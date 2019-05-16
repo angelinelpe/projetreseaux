@@ -641,7 +641,7 @@ main(int argc, char **argv) {
 
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5003);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
@@ -677,11 +677,7 @@ main(int argc, char **argv) {
 		}
 		else{
 			if(clientsLoggedIn[nbClientsConnected].connected == 0){
-				if ((nouv_socket_descriptor = 
-					accept(socket_descriptor, 
-						   (sockaddr*)(&adresse_client_courant),
-						   &longueur_adresse_courante))
-					 < 0) {
+				if ((nouv_socket_descriptor = accept(socket_descriptor,(sockaddr*)(&adresse_client_courant),&longueur_adresse_courante))< 0) {
 					perror("erreur: echec de la création du client");
 					exit(1);
 				}

@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5003);
+    adresse_locale.sin_port = htons(5000);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", ntohs(adresse_locale.sin_port));
@@ -86,7 +86,16 @@ int main(int argc, char **argv) {
     
     printf("connexion etablie avec le serveur. \n\n");
 
-	printf("-----------------------------------\n");
+    printf("-----------------------------------\n");
+    printf("Voici les commandes du chat:\n");
+    printf("'/who' pour savoir qui est connecté\n");
+    printf("'/w destinataire message' pour chuchoter un message à un destinataire\n");
+    printf("'/join channel motDePasse' pour rejoindre un channel. Si il n'exste pas il sera créé. Vous ne pouvez rejoindre qu'un channel à la fois.\n");
+    printf("'/chan channel message' pour chuchoter un message à un channel\n");
+    printf("'/leave' pour quitter \n");
+    printf("'/cmd' pour un rappel des commandes\n");
+    printf("-----------------------------------\n\n");
+
 	printf("Merci de choisir votre pseudo\n");
     fgets(pseudo, sizeof pseudo, stdin);
 	pseudo[strcspn(pseudo, "\n")] = '\0'; 
@@ -101,19 +110,6 @@ int main(int argc, char **argv) {
 	perror("erreur : impossible d'ecrire le message destine au serveur.");
 	exit(1);
     }
-
-    printf("\n\n%s, vous êtes connecté(e) au chat !\n\n", pseudo);
-    printf("-----------------------------------\n");
-    printf("Voici les commandes du chat:\n");
-    printf("'/who' pour savoir qui est connecté\n");
-    printf("'/w destinataire message' pour chuchoter un message à un destinataire\n");
-    printf("'/join channel motDePasse' pour rejoindre un channel. Si il n'exste pas il sera créé. Vous ne pouvez rejoindre qu'un channel à la fois.\n");
-    printf("'/chan channel message' pour chuchoter un message à un channel\n");
-	printf("'/leave' pour quitter \n");
-	printf("'/cmd' pour un rappel des commandes\n");
-	printf("-----------------------------------\n\n");
-
-
 
 	// Création du thread client pour l'écoute
     pthread_create(&thread_listen, NULL, clientManager, &socket_descriptor);
@@ -135,6 +131,7 @@ int main(int argc, char **argv) {
     printf("\nfin de la reception.\n");
     
     close(socket_descriptor);
+    pthread_exit(NULL);
     
     printf("connexion avec le serveur fermee, fin du programme.\n");
     
