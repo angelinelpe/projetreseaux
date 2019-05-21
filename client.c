@@ -21,7 +21,7 @@ static void * clientManager(void * socket_descriptor){
     int* socket = (int *) socket_descriptor;
     char buffer[256];
     
-    while(1){
+    for(;;){
         if((length = read(*socket, buffer, (int)sizeof(buffer)))<=0){
         	exit(1);
         }
@@ -104,23 +104,18 @@ int main(int argc, char **argv) {
             exit(1);
     }
   
-      
-    /* envoi du message vers le serveur */
     if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
 	perror("erreur : impossible d'ecrire le message destine au serveur.");
 	exit(1);
     }
 
-	// Création du thread client pour l'écoute
     pthread_create(&thread_listen, NULL, clientManager, &socket_descriptor);
 
-	// Tant que les messages émis sont différents de "/leave"
 	while(strcmp(mesg,"/leave")!=0){
         
         fgets(mesg, sizeof(mesg), stdin);
         mesg[strcspn(mesg, "\n")] = '\0'; 
 
-            //on envoie le message
             if ((write(socket_descriptor, mesg, strlen(mesg))) < 0) {
                 perror("erreur : impossible d'ecrire le message destine au serveur.");
                 exit(1);
