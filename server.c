@@ -83,24 +83,24 @@ static void * serverManager (void * sender){
         length = read((*client).socket, buffer, sizeof(buffer));
         buffer[length]='\0'; 
         exists = pseudoExists(buffer);
-        if (exists == 1)
-        {
+        if (exists == 1){
             char *message = malloc (sizeof (*message) * 256);
             strcpy(message,"Ce pseudo est déjà prit ! Merci d'en saisir un autre.");
             if((write((*client).socket,message,strlen(message)+1)) < 0){
                         perror("Erreur: le message n'a pas été transmit");
                         exit(1);
-                    } 
+                } 
+
         } else {
             strcpy((*client).pseudo, buffer);
-            write(1,buffer,length);
+            welcomeMessage(client);
         }
-        
+
     }
 
-    welcomeMessage(client);
+
     
-    while(1){
+    for(;;){
         length = read((*client).socket, buffer, sizeof(buffer));
         buffer[length]='\0';
 
@@ -150,10 +150,8 @@ static void * serverManager (void * sender){
 int pseudoExists(char pseudo[]){
     int equal;
     equal = 0;
-    for (int i = 0; i < nbClientsConnected; ++i)
-    {
-        if (strcmp(pseudo,clientsLoggedIn[i].pseudo)==0)
-        {
+    for (int i = 0; i < nbClientsConnected; ++i){
+        if (strcmp(pseudo,clientsLoggedIn[i].pseudo)==0){
             equal = 1;
         }
     }
@@ -175,12 +173,10 @@ void sendToChan(Client * client, char destination[], char buffer[]){
     int exists;
     exists = chanExists(destination);
 
-    if (exists == 1)
-    {   
+    if (exists == 1){   
         int connected;
         connected = connectedToChan(client,destination);
-        if (connected == 1)
-        {
+        if (connected == 1){
             strcpy(message, (*client).pseudo);
             strcat(message," au channel ");
             strcat(message, destination);
@@ -202,8 +198,7 @@ void sendToChan(Client * client, char destination[], char buffer[]){
             int pos;
             pos = findClient(client);
 
-            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-            {
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
                 if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
                     perror("Erreur: le message n'a pas été transmit");
                     exit(1);
@@ -217,8 +212,7 @@ void sendToChan(Client * client, char destination[], char buffer[]){
         int pos;
         pos = findClient(client);
 
-        if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-        {
+        if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
             if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0){
                 perror("Erreur: le message n'a pas été transmit");
                 exit(1);
@@ -231,8 +225,7 @@ int connectedToChan(Client * client, char channel[]){
     int pos;
     pos = findClient(client);
 
-    if (pos != 9999 && strcmp(clientsLoggedIn[pos].channel, channel)==0)
-    {
+    if (pos != 9999 && strcmp(clientsLoggedIn[pos].channel, channel)==0){
         return 1;
     } else return 0;
 }
@@ -249,8 +242,7 @@ void join(Client * client, char chan[], char pwd[]){
 
     char *message = malloc (sizeof (*message) * 256);
 
-    if (exists == 0)
-    { 
+    if (exists == 0){ 
         strcpy(channels[nbChannels].channel, chan);
         strcpy(channels[nbChannels].password, pwd);
         nbChannels ++;  
@@ -277,8 +269,7 @@ void join(Client * client, char chan[], char pwd[]){
         }
 
     }   
-    if (enter == 1)
-    {
+    if (enter == 1){
         strcpy(message," Vous entrez dans le channel ");
         strcat(message,chan);
 
@@ -445,8 +436,7 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
 
     if (strcmp(client->pseudo,destination)==0){
         pos = findClient(client);
-            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-            {
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
                 strcpy(message, "Vous tentez de parler tout seul ? C'est étrange ...");
                 if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
                     perror("Erreur: le message n'a pas été transmit");
@@ -456,18 +446,15 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
     } else {
         pos = findPositionPseudo(destination);
    
-        if (pos != 9999)
-        {
-            if (clientsLoggedIn[pos].connected == 1)
-            {
+        if (pos != 9999){
+            if (clientsLoggedIn[pos].connected == 1){
                 if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
                 perror("Erreur: le message n'a pas été transmit");
                 exit(1);
                 }
             } else {
                 pos = findClient(client);
-                if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-                {
+                if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
                     strcpy(message, "Le client n'est pas connecté");
                     if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
                         perror("Erreur: le message n'a pas été transmit");
@@ -477,8 +464,7 @@ void sendWhisper(Client * client, char destination[], char buffer[]){
             }     
         } else {
             pos = findClient(client);
-            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1))
-            {
+            if (pos != 9999 && (clientsLoggedIn[pos].connected == 1)){
                 strcpy(message, "Le pseudo n'existe pas.");
                 if((write(clientsLoggedIn[pos].socket,message,strlen(message)+1)) < 0 ){
                     perror("Erreur: le message n'a pas été transmit");
@@ -623,6 +609,7 @@ main(int argc, char **argv) {
     hostent*		ptr_hote; 			/* les infos recuperees sur la machine hote */
     servent*		ptr_service; 			/* les infos recuperees sur le service de la machine */
     char 		machine[TAILLE_MAX_NOM+1]; 	/* nom de la machine locale */
+    char    mesg[256];          /* message envoyé */
     
     gethostname(machine,TAILLE_MAX_NOM);		/* recuperation du nom de la machine */
     
@@ -692,6 +679,12 @@ main(int argc, char **argv) {
 				}
 			}
 		}
+
+        fgets(mesg, sizeof(mesg), stdin);
+        mesg[strcspn(mesg, "\n")] = '\0'; 
+        if (strcmp(mesg,"/leave")==0){
+            exit(1);
+        }
 	}
 
 	return 0;
