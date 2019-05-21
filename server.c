@@ -599,7 +599,7 @@ void byeMessage (Client * client){
 /*------------------------------------------------------*/
 
 /*------------------------------------------------------*/
-main(int argc, char **argv) {
+int main(int argc, char **argv) {
   
     int 		socket_descriptor, 		/* descripteur de socket */
 			nouv_socket_descriptor, 	/* [nouveau] descripteur de socket */
