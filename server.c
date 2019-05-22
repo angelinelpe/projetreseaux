@@ -680,11 +680,6 @@ int main(int argc, char **argv) {
 			}
 		}
 
-        fgets(mesg, sizeof(mesg), stdin);
-        mesg[strcspn(mesg, "\n")] = '\0'; 
-        if (strcmp(mesg,"/leave")==0){
-            exit(1);
-        }
 	}
 
 	return 0;
