@@ -162,12 +162,6 @@ int pseudoExists(char pseudo[]){
 void sendToChan(Client * client, char destination[], char buffer[]){
     char *message = malloc (sizeof (*message) * 256);
     // Création de la chaîne de caractère à afficher sur le chat
-    strcpy(message, (*client).pseudo);
-    strcat(message," au channel ");
-    strcat(message, destination);
-    strcat(message," : ");
-    strcat(message,buffer);
-    printf("%s\n", message);
 
     //test si chan existe
     int exists;
@@ -628,7 +622,7 @@ int main(int argc, char **argv) {
 
     /*-----------------------------------------------------------*/
     /* SOLUTION 2 : utiliser un nouveau numero de port */
-    adresse_locale.sin_port = htons(5000);
+    adresse_locale.sin_port = htons(5005);
     /*-----------------------------------------------------------*/
     
     printf("numero de port pour la connexion au serveur : %d \n", 
